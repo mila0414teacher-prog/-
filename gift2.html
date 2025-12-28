@@ -190,6 +190,9 @@
       'hexagonal-prism': { name: '六角柱', faces: 8, vertices: 12, edges: 18, emoji: '⬢' }
     };
 
+    // 題型：A(原本) / B(只給頂點 + 指定角柱或角錐)
+    const QUESTION_TYPES = { A: 'A', B: 'B' };
+
     let currentQuestion = null;
     let previousShape = null;
     let score = 0;
@@ -203,6 +206,12 @@
     let lastMouseY = 0;
     let playerName = '';
     let gameStarted = false;
+
+    // ✅ 新增：等待玩家按「下一個禮物盒」才出下一題
+    let awaitingNext = false;
+
+    // ✅ 新增：若第三次答錯，先看詳解；關閉詳解後再結束
+    let pendingGameOverAfterExplanation = false;
 
     const defaultConfig = {
       game_title: "聖誕禮物工廠",
@@ -310,9 +319,24 @@
       canvas.addEventListener('touchend', endDrag);
     }
 
-    function startGame() { gameStarted = true; generateQuestion(); }
+    function startGame() {
+      gameStarted = true;
+      awaitingNext = false;
+      pendingGameOverAfterExplanation = false;
+      generateQuestion();
+    }
 
+    // ====== 題目生成：A / B ======
     function generateQuestion() {
+      awaitingNext = false;
+      pendingGameOverAfterExplanation = false;
+
+      const type = Math.random() < 0.7 ? QUESTION_TYPES.A : QUESTION_TYPES.B;
+      if (type === QUESTION_TYPES.B) { generateQuestionTypeB(); return; }
+      generateQuestionTypeA();
+    }
+
+    function generateQuestionTypeA() {
       const shapeKeys = Object.keys(shapes);
       const uniqueShapes = [];
 
@@ -333,12 +357,43 @@
 
       previousShape = randomShape;
 
-      currentQuestion = { correctAnswer: randomShape, faces: shape.faces, vertices: shape.vertices, edges: shape.edges };
+      currentQuestion = {
+        type: QUESTION_TYPES.A,
+        correctAnswer: randomShape,
+        faces: shape.faces,
+        vertices: shape.vertices,
+        edges: shape.edges
+      };
 
-      const questionText = `它有 ${shape.faces} 個面、${shape.vertices} 個頂點和 ${shape.edges} 條邊。`;
-      document.getElementById('question').textContent = questionText;
+      document.getElementById('question').textContent =
+        `它有 ${shape.faces} 個面、${shape.vertices} 個頂點和 ${shape.edges} 條邊。`;
     }
 
+    function generateQuestionTypeB() {
+      const family = Math.random() < 0.5 ? 'prism' : 'pyramid';
+      const pool = Object.keys(shapes).filter(k => k.includes(family));
+      const available = pool.filter(k => k !== previousShape);
+      const shapePool = available.length > 0 ? available : pool;
+
+      const correctKey = shapePool[Math.floor(Math.random() * shapePool.length)];
+      const shape = shapes[correctKey];
+
+      previousShape = correctKey;
+
+      currentQuestion = {
+        type: QUESTION_TYPES.B,
+        family,
+        correctAnswer: correctKey,
+        vertices: shape.vertices
+      };
+
+      const familyText = family === 'prism' ? '角柱' : '角錐';
+      document.getElementById('question').textContent =
+        `有一個${familyText}共有 ${shape.vertices} 個頂點，想想看，這是什麼${familyText}？`;
+    }
+    // =====================================
+
+    // ====== 3D 拖曳 ======
     function startDrag(e) { isDragging = true; lastMouseX = e.clientX; lastMouseY = e.clientY; }
     function drag(e) {
       if (!isDragging) return;
@@ -367,8 +422,9 @@
       draw3DShape(currentQuestion.correctAnswer);
       e.preventDefault();
     }
+    // =====================================
 
-    // ====== 底面邊數判斷 + 規律詳解（把括號中的 n 改成明確數字） ======
+    // ====== 規律詳解 ======
     function getBaseSidesFromKey(shapeKey) {
       if (shapeKey.includes('triangular')) return 3;
       if (shapeKey.includes('square') || shapeKey.includes('rectangular')) return 4;
@@ -377,7 +433,7 @@
       return null;
     }
 
-    function buildRuleExplanation(shapeKey) {
+    function buildRuleExplanationByKey(shapeKey) {
       const n = getBaseSidesFromKey(shapeKey);
       if (!n) return `<p class="mb-2">我暫時無法判斷底面邊數，先直接看數量：面/頂點/邊。</p>`;
 
@@ -432,8 +488,38 @@
 
       return `<p class="mb-2">我判斷不出它是角柱或角錐，先直接看數量：面/頂點/邊。</p>`;
     }
-    // =====================================================================
 
+    function buildInverseExplanationTypeB(question) {
+      const correctKey = question.correctAnswer;
+      const correctShape = shapes[correctKey];
+
+      if (question.family === 'prism') {
+        const baseVertices = question.vertices / 2;
+        return `
+          <div class="space-y-2">
+            <p class="mb-1"><strong>題目說：角柱共有 ${question.vertices} 個頂點。</strong></p>
+            <p class="mb-1">角柱的規律：<strong>頂點數 = 底面頂點數 × 2</strong></p>
+            <p class="ml-4">所以底面頂點數 = ${question.vertices} ÷ 2 = <strong>${baseVertices}</strong></p>
+            <p class="mb-1">底面有 ${baseVertices} 個頂點，表示底面是 <strong>${baseVertices} 邊形</strong>。</p>
+            <p class="mb-1">因此它是：<strong>${correctShape.name}</strong> ✅</p>
+          </div>
+        `;
+      } else {
+        const baseVertices = question.vertices - 1;
+        return `
+          <div class="space-y-2">
+            <p class="mb-1"><strong>題目說：角錐共有 ${question.vertices} 個頂點。</strong></p>
+            <p class="mb-1">角錐的規律：<strong>頂點數 = 底面頂點數 + 1</strong>（多 1 個尖頂）</p>
+            <p class="ml-4">所以底面頂點數 = ${question.vertices} - 1 = <strong>${baseVertices}</strong></p>
+            <p class="mb-1">底面有 ${baseVertices} 個頂點，表示底面是 <strong>${baseVertices} 邊形</strong>。</p>
+            <p class="mb-1">因此它是：<strong>${shapes[question.correctAnswer].name}</strong> ✅</p>
+          </div>
+        `;
+      }
+    }
+    // =====================================
+
+    // ====== 這裡是你原本的 draw3DShape（完整保留） ======
     function draw3DShape(shapeKey) {
       const canvas = document.getElementById('shape3D');
       const ctx = canvas.getContext('2d');
@@ -649,9 +735,33 @@
         faces.forEach(face => drawFace(face.points, face.color, face.avgZ));
       }
     }
+    // =====================================
+
+    // ✅ 重要：點「下一個禮物盒」才出下一題（這裡改成按鈕）
+    function showNextGiftButton() {
+      awaitingNext = true;
+
+      const conveyorItem = document.getElementById('conveyorItem');
+      conveyorItem.innerHTML = `
+        <button id="nextGiftBtn"
+          class="text-2xl md:text-3xl font-bold text-white bg-red-600 hover:bg-red-700 px-8 py-4 rounded-lg shadow-lg border-2 border-white/40">
+          下一個禮物盒
+        </button>
+      `;
+
+      const btn = document.getElementById('nextGiftBtn');
+      btn.addEventListener('click', () => {
+        if (!awaitingNext) return;
+        awaitingNext = false;
+        conveyorItem.innerHTML = '';
+        generateQuestion();
+        isProcessing = false;
+      }, { once: true });
+    }
 
     async function handleShapeClick(event) {
-      if (isProcessing || !gameStarted) return;
+      // ✅ 等待「下一個禮物盒」時，禁止再作答
+      if (isProcessing || !gameStarted || awaitingNext) return;
 
       const button = event.currentTarget;
       const selectedShape = button.dataset.shape;
@@ -665,8 +775,8 @@
         await showPackaging(selectedShape);
         button.classList.remove('ring-4', 'ring-green-400');
 
-        showNextGiftMessage();
-        setTimeout(() => { generateQuestion(); isProcessing = false; }, 2000);
+        // ✅ 改：不自動出題，改成出「下一個禮物盒」按鈕
+        showNextGiftButton();
       } else {
         mistakes++;
         document.getElementById('mistakes').textContent = `${mistakes}/3`;
@@ -675,8 +785,11 @@
 
         setTimeout(() => {
           button.classList.remove('shake-animation', 'ring-4', 'ring-red-400');
-          if (mistakes >= 3) endGame();
-          else showExplanation();
+
+          // ✅ 改：第三次答錯也先出詳解；關閉詳解後才結束
+          if (mistakes >= 3) pendingGameOverAfterExplanation = true;
+
+          showExplanation();
         }, 500);
       }
     }
@@ -684,24 +797,42 @@
     function showExplanation() {
       const correctKey = currentQuestion.correctAnswer;
       const correctShape = shapes[correctKey];
-      const ruleHtml = buildRuleExplanation(correctKey);
 
-      const explanationText = `
-        <p class="mb-2">答案是「<strong>${correctShape.name}</strong>」喔！</p>
+      let explanationBody = '';
 
-        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
-          <div class="text-amber-900 font-bold mb-2">📌 用規律一步一步推：</div>
-          ${ruleHtml}
-        </div>
+      if (currentQuestion.type === QUESTION_TYPES.A) {
+        const ruleHtml = buildRuleExplanationByKey(correctKey);
+        explanationBody = `
+          <p class="mb-2">答案是「<strong>${correctShape.name}</strong>」喔！</p>
 
-        <p class="mb-2">題目給的是：<strong>${currentQuestion.faces}</strong> 個面、
-          <strong>${currentQuestion.vertices}</strong> 個頂點、
-          <strong>${currentQuestion.edges}</strong> 條邊。</p>
+          <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
+            <div class="text-amber-900 font-bold mb-2">📌 用規律一步一步推：</div>
+            ${ruleHtml}
+          </div>
 
-        <p>試著轉動下面的 3D 模型，對照「面、頂點、邊」在哪裡！</p>
-      `;
+          <p class="mb-2">題目給的是：<strong>${currentQuestion.faces}</strong> 個面、
+            <strong>${currentQuestion.vertices}</strong> 個頂點、
+            <strong>${currentQuestion.edges}</strong> 條邊。</p>
 
-      document.getElementById('explanationText').innerHTML = explanationText;
+          <p>試著轉動下面的 3D 模型，對照「面、頂點、邊」在哪裡！</p>
+        `;
+      } else {
+        const familyText = currentQuestion.family === 'prism' ? '角柱' : '角錐';
+        const inverseHtml = buildInverseExplanationTypeB(currentQuestion);
+        explanationBody = `
+          <p class="mb-2">答案是「<strong>${correctShape.name}</strong>」喔！</p>
+
+          <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-3">
+            <div class="text-amber-900 font-bold mb-2">📌 只看「頂點」也能反推：</div>
+            ${inverseHtml}
+          </div>
+
+          <p class="mb-2">題目給的是：這個<strong>${familyText}</strong>共有 <strong>${currentQuestion.vertices}</strong> 個頂點。</p>
+          <p>試著轉動下面的 3D 模型，看看頂點在哪裡！</p>
+        `;
+      }
+
+      document.getElementById('explanationText').innerHTML = explanationBody;
 
       document.getElementById('explanationModal').classList.remove('hidden');
       document.getElementById('explanationModal').classList.add('flex');
@@ -718,12 +849,16 @@
       document.getElementById('explanationModal').classList.add('hidden');
       document.getElementById('explanationModal').classList.remove('flex');
 
-      showNextGiftMessage();
+      // ✅ 第三次答錯：關閉詳解後才進結束畫面
+      if (pendingGameOverAfterExplanation) {
+        pendingGameOverAfterExplanation = false;
+        endGame();
+        return;
+      }
 
-      setTimeout(() => {
-        generateQuestion();
-        isProcessing = false;
-      }, 2000);
+      // ✅ 不是第三次答錯：關閉詳解後，也要按「下一個禮物盒」才出題
+      isProcessing = false;      // 讓按鈕能點
+      showNextGiftButton();      // 出現按鈕
     }
 
     function showPackaging(shapeKey) {
@@ -740,13 +875,10 @@
       });
     }
 
-    function showNextGiftMessage() {
-      const conveyorItem = document.getElementById('conveyorItem');
-      conveyorItem.innerHTML = `<div class="text-3xl font-bold text-white bg-red-600 px-8 py-4 rounded-lg shadow-lg">下一個禮物盒</div>`;
-      setTimeout(() => { conveyorItem.innerHTML = ''; }, 2000);
-    }
-
     async function endGame() {
+      awaitingNext = false;
+      isProcessing = false;
+
       document.getElementById('finalScore').textContent = score;
       document.getElementById('playerNameDisplay').textContent = playerName;
       document.getElementById('gameOverModal').classList.remove('hidden');
@@ -772,12 +904,19 @@
       mistakes = 0;
       previousShape = null;
       gameStarted = false;
+      awaitingNext = false;
+      pendingGameOverAfterExplanation = false;
+
       document.getElementById('score').textContent = score;
       document.getElementById('mistakes').textContent = '0/3';
+      document.getElementById('conveyorItem').innerHTML = '';
+
       document.getElementById('gameOverModal').classList.add('hidden');
       document.getElementById('gameOverModal').classList.remove('flex');
+
       document.getElementById('startModal').classList.remove('hidden');
       document.getElementById('startModal').classList.add('flex');
+
       document.getElementById('playerNameInput').value = '';
       isProcessing = false;
     }
