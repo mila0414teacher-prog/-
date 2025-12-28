@@ -28,17 +28,15 @@
     .deliver-animation { animation: deliver 1s ease-in forwards; }
     .shake-animation { animation: shake 0.5s ease-in-out; }
 
-    /* ====== 新增：詳解視窗內容可捲動（滑桿） + 讓視窗更寬 ====== */
+    /* 詳解視窗：可捲動 + 更寬 */
     .modal-scroll {
-      max-height: 72vh;        /* 內容超過就出現滑桿 */
+      max-height: 72vh;
       overflow-y: auto;
-      padding-right: 6px;      /* 讓滑桿不壓到文字 */
+      padding-right: 6px;
     }
-    /* 自訂滑桿（可不需要，但看起來更清楚） */
     .modal-scroll::-webkit-scrollbar { width: 10px; }
     .modal-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.25); border-radius: 999px; }
     .modal-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.06); border-radius: 999px; }
-    /* ============================================================ */
   </style>
   <style>@view-transition { navigation: auto; }</style>
  </head>
@@ -141,13 +139,11 @@
     </div>
    </div>
 
-   <!-- 答錯詳解視窗（已加：更寬 + 有滑桿） -->
+   <!-- 答錯詳解視窗 -->
    <div id="explanationModal" class="fixed inset-0 bg-black bg-opacity-50 items-center justify-center hidden z-50">
-    <!-- 這裡把 max-w-lg 改成 max-w-5xl，並加 w-[min(96vw,1100px)] 讓它在大螢幕更寬 -->
     <div class="bg-white rounded-lg p-6 w-[min(96vw,1100px)] max-w-5xl mx-4 shadow-2xl relative">
       <button id="closeExplanation" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700 text-2xl font-bold">✕</button>
 
-      <!-- modal-scroll 會讓內容超過高度就有滑桿 -->
       <div class="modal-scroll">
         <div class="flex items-start gap-4">
           <div class="text-6xl">🦌</div>
@@ -219,11 +215,7 @@
       font_size: 16
     };
 
-    const dataHandler = {
-      onDataChanged(data) {
-        gameRecords = data;
-      }
-    };
+    const dataHandler = { onDataChanged(data) { gameRecords = data; } };
 
     async function initializeApp() {
       if (window.dataSdk) {
@@ -255,9 +247,7 @@
             document.getElementById('confirmNameBtn').style.backgroundColor = config.button_color || defaultConfig.button_color;
 
             const allText = document.querySelectorAll('body *');
-            allText.forEach(el => {
-              if (!el.style.fontFamily) el.style.fontFamily = fontStack;
-            });
+            allText.forEach(el => { if (!el.style.fontFamily) el.style.fontFamily = fontStack; });
           },
           mapToCapabilities: (config) => ({
             recolorables: [
@@ -320,10 +310,7 @@
       canvas.addEventListener('touchend', endDrag);
     }
 
-    function startGame() {
-      gameStarted = true;
-      generateQuestion();
-    }
+    function startGame() { gameStarted = true; generateQuestion(); }
 
     function generateQuestion() {
       const shapeKeys = Object.keys(shapes);
@@ -334,9 +321,7 @@
         const hasDuplicate = shapeKeys.some(otherKey => {
           if (key === otherKey) return false;
           const otherShape = shapes[otherKey];
-          return shape.faces === otherShape.faces &&
-                 shape.vertices === otherShape.vertices &&
-                 shape.edges === otherShape.edges;
+          return shape.faces === otherShape.faces && shape.vertices === otherShape.vertices && shape.edges === otherShape.edges;
         });
         if (!hasDuplicate) uniqueShapes.push(key);
       });
@@ -348,12 +333,7 @@
 
       previousShape = randomShape;
 
-      currentQuestion = {
-        correctAnswer: randomShape,
-        faces: shape.faces,
-        vertices: shape.vertices,
-        edges: shape.edges
-      };
+      currentQuestion = { correctAnswer: randomShape, faces: shape.faces, vertices: shape.vertices, edges: shape.edges };
 
       const questionText = `它有 ${shape.faces} 個面、${shape.vertices} 個頂點和 ${shape.edges} 條邊。`;
       document.getElementById('question').textContent = questionText;
@@ -366,8 +346,7 @@
       const deltaY = e.clientY - lastMouseY;
       rotationY += deltaX * 0.01;
       rotationX += deltaY * 0.01;
-      lastMouseX = e.clientX;
-      lastMouseY = e.clientY;
+      lastMouseX = e.clientX; lastMouseY = e.clientY;
       draw3DShape(currentQuestion.correctAnswer);
     }
     function endDrag() { isDragging = false; }
@@ -384,13 +363,12 @@
       const deltaY = e.touches[0].clientY - lastMouseY;
       rotationY += deltaX * 0.01;
       rotationX += deltaY * 0.01;
-      lastMouseX = e.touches[0].clientX;
-      lastMouseY = e.touches[0].clientY;
+      lastMouseX = e.touches[0].clientX; lastMouseY = e.touches[0].clientY;
       draw3DShape(currentQuestion.correctAnswer);
       e.preventDefault();
     }
 
-    // ====== 底面邊數判斷 + 規律詳解產生 ======
+    // ====== 底面邊數判斷 + 規律詳解（把括號中的 n 改成明確數字） ======
     function getBaseSidesFromKey(shapeKey) {
       if (shapeKey.includes('triangular')) return 3;
       if (shapeKey.includes('square') || shapeKey.includes('rectangular')) return 4;
@@ -438,13 +416,13 @@
           <div class="space-y-2">
             <p class="mb-1"><strong>它是「角錐」</strong>，底面是 <strong>${n} 邊形</strong>（底面有 ${n} 個頂點、${n} 條邊）。</p>
 
-            <p class="mb-1"><strong>① 頂點數</strong>：角錐的頂點個數 = 底面的頂點個數 + 1（上面多一個尖頂）</p>
+            <p class="mb-1"><strong>① 頂點數</strong>：角錐的頂點個數 = 底面的頂點個數 + 1（上面多 1 個尖頂）</p>
             <p class="ml-4">= ${n} + 1 = <strong>${vertices}</strong></p>
 
-            <p class="mb-1"><strong>② 面數</strong>：角錐面的個數 = 底面邊的個數 + 1（底面 1 個 + 側面 n 個）</p>
+            <p class="mb-1"><strong>② 面數</strong>：角錐面的個數 = 底面邊的個數 + 1（底面 1 個 + 側面 ${n} 個）</p>
             <p class="ml-4">= ${n} + 1 = <strong>${faces}</strong></p>
 
-            <p class="mb-1"><strong>③ 邊數</strong>：角錐邊的個數 = 底面邊的個數 × 2（底面 n 條 + 從尖頂連到底面 n 條）</p>
+            <p class="mb-1"><strong>③ 邊數</strong>：角錐邊的個數 = 底面邊的個數 × 2（底面 ${n} 條 + 從尖頂連到底面 ${n} 條）</p>
             <p class="ml-4">= ${n} × 2 = <strong>${edges}</strong></p>
 
             <p class="text-sm text-gray-600 mt-2">所以它有 ${faces} 個面、${vertices} 個頂點、${edges} 條邊。</p>
@@ -454,7 +432,7 @@
 
       return `<p class="mb-2">我判斷不出它是角柱或角錐，先直接看數量：面/頂點/邊。</p>`;
     }
-    // =================================================
+    // =====================================================================
 
     function draw3DShape(shapeKey) {
       const canvas = document.getElementById('shape3D');
@@ -516,10 +494,7 @@
           { points: [projected[1], projected[2], projected[3]], color: '#ff8787', indices: [1, 2, 3] }
         ];
 
-        faces.forEach(face => {
-          face.avgZ = (projected[face.indices[0]].z + projected[face.indices[1]].z + projected[face.indices[2]].z) / 3;
-        });
-
+        faces.forEach(face => { face.avgZ = (projected[face.indices[0]].z + projected[face.indices[1]].z + projected[face.indices[2]].z) / 3; });
         faces.sort((a, b) => a.avgZ - b.avgZ);
         faces.forEach(face => drawFace(face.points, face.color, face.avgZ));
       } else if (shapeKey === 'square-pyramid') {
@@ -540,10 +515,7 @@
           { points: [projected[1], projected[2], projected[3], projected[4]], color: '#8ce99a', indices: [1, 2, 3, 4] }
         ];
 
-        faces.forEach(face => {
-          face.avgZ = face.indices.reduce((sum, i) => sum + projected[i].z, 0) / face.indices.length;
-        });
-
+        faces.forEach(face => { face.avgZ = face.indices.reduce((sum, i) => sum + projected[i].z, 0) / face.indices.length; });
         faces.sort((a, b) => a.avgZ - b.avgZ);
         faces.forEach(face => drawFace(face.points, face.color, face.avgZ));
       } else if (shapeKey === 'pentagonal-pyramid') {
@@ -561,10 +533,7 @@
         }
         faces.push({ points: [projected[1], projected[2], projected[3], projected[4], projected[5]], color: '#a5d8ff', indices: [1, 2, 3, 4, 5] });
 
-        faces.forEach(face => {
-          face.avgZ = face.indices.reduce((sum, i) => sum + projected[i].z, 0) / face.indices.length;
-        });
-
+        faces.forEach(face => { face.avgZ = face.indices.reduce((sum, i) => sum + projected[i].z, 0) / face.indices.length; });
         faces.sort((a, b) => a.avgZ - b.avgZ);
         faces.forEach(face => drawFace(face.points, face.color, face.avgZ));
       } else if (shapeKey === 'hexagonal-pyramid') {
@@ -582,10 +551,7 @@
         }
         faces.push({ points: [projected[1], projected[2], projected[3], projected[4], projected[5], projected[6]], color: '#e599f7', indices: [1, 2, 3, 4, 5, 6] });
 
-        faces.forEach(face => {
-          face.avgZ = face.indices.reduce((sum, i) => sum + projected[i].z, 0) / face.indices.length;
-        });
-
+        faces.forEach(face => { face.avgZ = face.indices.reduce((sum, i) => sum + projected[i].z, 0) / face.indices.length; });
         faces.sort((a, b) => a.avgZ - b.avgZ);
         faces.forEach(face => drawFace(face.points, face.color, face.avgZ));
       } else if (shapeKey === 'triangular-prism') {
@@ -607,10 +573,7 @@
           { points: [projected[2], projected[0], projected[3], projected[5]], color: '#e64980', indices: [2, 0, 3, 5] }
         ];
 
-        faces.forEach(face => {
-          face.avgZ = face.indices.reduce((sum, i) => sum + projected[i].z, 0) / face.indices.length;
-        });
-
+        faces.forEach(face => { face.avgZ = face.indices.reduce((sum, i) => sum + projected[i].z, 0) / face.indices.length; });
         faces.sort((a, b) => a.avgZ - b.avgZ);
         faces.forEach(face => drawFace(face.points, face.color, face.avgZ));
       } else if (shapeKey === 'rectangular-prism') {
@@ -635,10 +598,7 @@
           { points: [projected[0], projected[3], projected[7], projected[4]], color: '#51cf66', indices: [0, 3, 7, 4] }
         ];
 
-        faces.forEach(face => {
-          face.avgZ = face.indices.reduce((sum, i) => sum + projected[i].z, 0) / face.indices.length;
-        });
-
+        faces.forEach(face => { face.avgZ = face.indices.reduce((sum, i) => sum + projected[i].z, 0) / face.indices.length; });
         faces.sort((a, b) => a.avgZ - b.avgZ);
         faces.forEach(face => drawFace(face.points, face.color, face.avgZ));
       } else if (shapeKey === 'pentagonal-prism') {
@@ -661,10 +621,7 @@
           faces.push({ points: [projected[i], projected[next], projected[next + 5], projected[i + 5]], color: `#${(150 + i * 15).toString(16)}a0ff`, indices: [i, next, next + 5, i + 5] });
         }
 
-        faces.forEach(face => {
-          face.avgZ = face.indices.reduce((sum, i) => sum + projected[i].z, 0) / face.indices.length;
-        });
-
+        faces.forEach(face => { face.avgZ = face.indices.reduce((sum, i) => sum + projected[i].z, 0) / face.indices.length; });
         faces.sort((a, b) => a.avgZ - b.avgZ);
         faces.forEach(face => drawFace(face.points, face.color, face.avgZ));
       } else if (shapeKey === 'hexagonal-prism') {
@@ -687,10 +644,7 @@
           faces.push({ points: [projected[i], projected[next], projected[next + 6], projected[i + 6]], color: `#${(200 + i * 10).toString(16)}${(180 + i * 10).toString(16)}60`, indices: [i, next, next + 6, i + 6] });
         }
 
-        faces.forEach(face => {
-          face.avgZ = face.indices.reduce((sum, i) => sum + projected[i].z, 0) / face.indices.length;
-        });
-
+        faces.forEach(face => { face.avgZ = face.indices.reduce((sum, i) => sum + projected[i].z, 0) / face.indices.length; });
         faces.sort((a, b) => a.avgZ - b.avgZ);
         faces.forEach(face => drawFace(face.points, face.color, face.avgZ));
       }
@@ -701,7 +655,6 @@
 
       const button = event.currentTarget;
       const selectedShape = button.dataset.shape;
-
       isProcessing = true;
 
       if (selectedShape === currentQuestion.correctAnswer) {
@@ -709,17 +662,11 @@
         document.getElementById('score').textContent = score;
 
         button.classList.add('ring-4', 'ring-green-400');
-
         await showPackaging(selectedShape);
-
         button.classList.remove('ring-4', 'ring-green-400');
 
         showNextGiftMessage();
-
-        setTimeout(() => {
-          generateQuestion();
-          isProcessing = false;
-        }, 2000);
+        setTimeout(() => { generateQuestion(); isProcessing = false; }, 2000);
       } else {
         mistakes++;
         document.getElementById('mistakes').textContent = `${mistakes}/3`;
@@ -728,12 +675,8 @@
 
         setTimeout(() => {
           button.classList.remove('shake-animation', 'ring-4', 'ring-red-400');
-
-          if (mistakes >= 3) {
-            endGame();
-          } else {
-            showExplanation();
-          }
+          if (mistakes >= 3) endGame();
+          else showExplanation();
         }, 500);
       }
     }
@@ -741,7 +684,6 @@
     function showExplanation() {
       const correctKey = currentQuestion.correctAnswer;
       const correctShape = shapes[correctKey];
-
       const ruleHtml = buildRuleExplanation(correctKey);
 
       const explanationText = `
@@ -764,7 +706,6 @@
       document.getElementById('explanationModal').classList.remove('hidden');
       document.getElementById('explanationModal').classList.add('flex');
 
-      // 顯示時把捲軸拉到最上面
       const scrollBox = document.querySelector('#explanationModal .modal-scroll');
       if (scrollBox) scrollBox.scrollTop = 0;
 
@@ -794,11 +735,7 @@
 
         setTimeout(() => {
           conveyorItem.innerHTML = `<div class="text-8xl deliver-animation">🎁</div>`;
-
-          setTimeout(() => {
-            conveyorItem.innerHTML = '';
-            resolve();
-          }, 1000);
+          setTimeout(() => { conveyorItem.innerHTML = ''; resolve(); }, 1000);
         }, 800);
       });
     }
@@ -806,7 +743,6 @@
     function showNextGiftMessage() {
       const conveyorItem = document.getElementById('conveyorItem');
       conveyorItem.innerHTML = `<div class="text-3xl font-bold text-white bg-red-600 px-8 py-4 rounded-lg shadow-lg">下一個禮物盒</div>`;
-
       setTimeout(() => { conveyorItem.innerHTML = ''; }, 2000);
     }
 
